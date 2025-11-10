@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Штатив с двумя матрицами (Server версия)</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="containerForMetrices">
+        <h1>Штатив с двумя матрицами 10×6</h1>
+        <div class="info">
+            Зажмите мышь и проведите по ячейкам, чтобы нарисовать контур<br>
+            <small style="color: #666;">Двойной клик на ячейке — снять выделение</small>
+        </div>
+        <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+            <div>
+                <h3 style="text-align: center; color: #333; margin-bottom: 10px;">Матрица 1</h3>
+                <div class="matrix-wrapper">
+                    <div class="matrix" id="matrix1"></div>
+                </div>
+            </div>
+            <div>
+                <h3 style="text-align: center; color: #333; margin-bottom: 10px;">Матрица 2</h3>
+                <div class="matrix-wrapper">
+                    <div class="matrix" id="matrix2"></div>
+                </div>
+            </div>
+        </div>
+        <div class="controls">
+            <button onclick="calculateInside()">Заполнить внутренние области</button>
+            <button onclick="reset()">Очистить</button>
+            <button onclick="saveMatrixToPython()">Сохранить расстановку</button>
+            <button onclick="goToHome()">🏠 На главную</button>
+        </div>
+        <div class="message" id="message"></div>
+    </div>
+
+    <script>
+        const ROWS = 10;
+        const COLS = 6;
+        let matrix1 = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+        let matrix2 = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+        let contourCells1 = new Set();
+        let contourCells2 = new Set();
+        let isDrawing = false;
+
+        // Весь код создания матриц такой же...
+        function createMatrix() {
+            createSingleMatrix('matrix1', contourCells1, matrix1);
+            createSingleMatrix('matrix2', contourCells2, matrix2);
+        }
+
+        function createSingleMatrix(containerId, contourCells, matrix) {
+            const matrixDiv = document.getElementById(containerId);
+            matrixDiv.innerHTML = '';
+            matrixDiv.dataset.matrixId = containerId;
+            
+            for (let i = 0; i < ROWS; i++) {
+                for (let j = 0; j < COLS; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    cell.dataset.matrixId = containerId;
+                    cell.textContent = '0';
+                    
+                    cell.addEventListener('mousedown', startDrawing);
+                    cell.addEventListener('mouseenter', drawContour);
+                    cell.addEventListener('mouseup', stopDrawing);
+                    cell.addEventListener('dblclick', removeFromContour);  // Двойной клик для удаления
+                    
+                    matrixDiv.appendChild(cell);
+                }
+            }
+        }
+
+        function startDrawing(e) {
+            isDrawing = true;
+            addToContour(e.target);
+        }
+
+        function drawContour(e) {
+            if (isDrawing) {
+                addToContour(e.target);
+            }
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        function addToContour(cell) {
+            const row = parseInt(cell.dataset.row);
+            const col = parseInt(cell.dataset.col);
+            const matrixId = cell.dataset.matrixId;
+            const key = `${row},${col}`;
+            
+            const contourCells = matrixId === 'matrix1' ? contourCells1 : contourCells2;
+            const matrix = matrixId === 'matrix1' ? matrix1 : matrix2;
+            
+            if (!contourCells.has(key)) {
+                contourCells.add(key);
+                cell.classList.add('contour');
+                cell.classList.remove('inside');
+                cell.textContent = 'C';
+                matrix[row][col] = 1;
+            }
+        }
+
+        function removeFromContour(e) {
+            const cell = e.target;
+            const row = parseInt(cell.dataset.row);
+            const col = parseInt(cell.dataset.col);
+            const matrixId = cell.dataset.matrixId;
+            const key = `${row},${col}`;
+            
+            const contourCells = matrixId === 'matrix1' ? contourCells1 : contourCells2;
+            const matrix = matrixId === 'matrix1' ? matrix1 : matrix2;
+            
+            // Удаляем из контура и внутренних областей
+            if (contourCells.has(key)) {
+                contourCells.delete(key);
+                cell.classList.remove('contour');
+            }
+            
+            cell.classList.remove('inside');
+            cell.textContent = '0';
+            matrix[row][col] = 0;
+        }
+
+        function calculateInside() {
+            calculateInsideForMatrix('matrix1', contourCells1, matrix1);
+            calculateInsideForMatrix('matrix2', contourCells2, matrix2);
+        }
+
+        function calculateInsideForMatrix(matrixId, contourCells, matrix) {
+            const matrixDiv = document.getElementById(matrixId);
+            const cells = matrixDiv.querySelectorAll('.cell');
+            cells.forEach(cell => {
+                if (!cell.classList.contains('contour')) {
+                    cell.classList.remove('inside');
+                    const row = parseInt(cell.dataset.row);
+                    const col = parseInt(cell.dataset.col);
+                    matrix[row][col] = 0;
+                }
+            });
+
+            let visited = Array(ROWS).fill().map(() => Array(COLS).fill(false));
+            
+            contourCells.forEach(key => {
+                const [row, col] = key.split(',').map(Number);
+                visited[row][col] = true;
+            });
+
+            function floodFill(row, col) {
+                if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return;
+                if (visited[row][col]) return;
+                
+                visited[row][col] = true;
+                
+                floodFill(row - 1, col);
+                floodFill(row + 1, col);
+                floodFill(row, col - 1);
+                floodFill(row, col + 1);
+            }
+
+            for (let i = 0; i < ROWS; i++) {
+                floodFill(i, 0);
+                floodFill(i, COLS - 1);
+            }
+            for (let j = 0; j < COLS; j++) {
+                floodFill(0, j);
+                floodFill(ROWS - 1, j);
+            }
+
+            cells.forEach(cell => {
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                
+                if (!visited[row][col] && !cell.classList.contains('contour')) {
+                    cell.classList.add('inside');
+                    cell.textContent = '1';
+                    matrix[row][col] = 1;
+                } else if (!cell.classList.contains('contour')) {
+                    cell.textContent = '0';
+                    matrix[row][col] = 0;
+                }
+            });
+        }
+
+        function reset() {
+            matrix1 = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+            matrix2 = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+            contourCells1.clear();
+            contourCells2.clear();
+            
+            resetMatrix('matrix1');
+            resetMatrix('matrix2');
+            
+            const messageDiv = document.getElementById('message');
+            messageDiv.style.display = 'none';
+        }
+
+        function resetMatrix(matrixId) {
+            const cells = document.getElementById(matrixId).querySelectorAll('.cell');
+            cells.forEach(cell => {
+                cell.classList.remove('contour', 'inside');
+                cell.textContent = '0';
+            });
+        }
+
+        function showMessage(text, isError = false) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = 'message' + (isError ? ' error' : '');
+            messageDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        // СОХРАНЕНИЕ ЧЕРЕЗ СЕРВЕР
+        async function saveMatrixToPython() {
+            try {
+                // Формируем содержимое Python файла БЕЗ numpy
+                let pythonContent = '# Матрицы контуров штатива\n';
+                pythonContent += `# Размер каждой матрицы: ${ROWS}x${COLS}\n`;
+                pythonContent += '# 1 = внутри контура или на контуре, 0 = снаружи\n\n';
+                
+                pythonContent += '# Матрица 1\n';
+                pythonContent += 'matrix1 = [\n';
+                for (let i = 0; i < ROWS; i++) {
+                    pythonContent += '    [' + matrix1[i].join(', ') + ']';
+                    pythonContent += (i < ROWS - 1) ? ',\n' : '\n';
+                }
+                pythonContent += ']\n\n';
+                
+                pythonContent += '# Матрица 2\n';
+                pythonContent += 'matrix2 = [\n';
+                for (let i = 0; i < ROWS; i++) {
+                    pythonContent += '    [' + matrix2[i].join(', ') + ']';
+                    pythonContent += (i < ROWS - 1) ? ',\n' : '\n';
+                }
+                pythonContent += ']\n\n';
+                
+                pythonContent += '# Функции для получения матриц\n';
+                pythonContent += 'def get_matrix1():\n    return matrix1\n\n';
+                pythonContent += 'def get_matrix2():\n    return matrix2\n\n';
+                pythonContent += 'def get_both_matrices():\n    return matrix1, matrix2\n\n';
+                pythonContent += `ROWS = ${ROWS}\nCOLS = ${COLS}\n`;
+                
+                // Отправляем на сервер
+                const response = await fetch('http://localhost:5000/save_matrix', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        content: pythonContent,
+                        filename: 'matrix_data.py'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('✅ ' + result.message);
+                } else {
+                    showMessage('❌ ' + result.message, true);
+                }
+            } catch (error) {
+                showMessage('❌ Ошибка: убедись что сервер запущен (python server.py)', true);
+            }
+        }
+
+        function goToHome() {
+            window.location.href = '/';
+        }
+
+        document.addEventListener('mouseup', stopDrawing);
+        document.addEventListener('mouseleave', stopDrawing);
+
+        createMatrix();
+    </script>
+</body>
+</html>

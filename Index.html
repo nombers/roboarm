@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Система штативов</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 700px;
+            width: 90%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 32px;
+        }
+
+        .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .button-section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            color: #666;
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            letter-spacing: 1px;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .button-column {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: stretch;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 16px;
+            cursor: pointer;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            transition: all 0.3s;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            min-width: 200px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-settings {
+            background-color: #9b59b6;
+        }
+
+        .btn-settings:hover {
+            background-color: #8e44ad;
+        }
+
+        .btn-start {
+            background-color: #27ae60;
+        }
+
+        .btn-start:hover {
+            background-color: #229954;
+        }
+
+        .btn-pause {
+            background-color: #e67e22;
+        }
+
+        .btn-pause:hover {
+            background-color: #d35400;
+        }
+
+        .btn-rack {
+            background-color: #3498db;
+        }
+
+        .btn-rack:hover {
+            background-color: #2980b9;
+        }
+
+        .divider {
+            height: 2px;
+            background: linear-gradient(to right, transparent, #ddd, transparent);
+            margin: 30px 0;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-ready {
+            background-color: #27ae60;
+        }
+
+        .status-paused {
+            background-color: #e67e22;
+        }
+
+        .status-stopped {
+            background-color: #95a5a6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">⚗️</div>
+        <h1>Система штативов</h1>
+
+        <!-- Секция настроек и управления -->
+        <div class="button-section">
+            <div class="section-title">Настройки и управление</div>
+            <div class="button-row">
+                <button class="btn-settings" onclick="goToSettings()">
+                    ⚙️ Поменять количество изначальных пробирок в штативе
+                </button>
+            </div>
+            <div class="button-row">
+                <button class="btn-start" onclick="startProgram()">
+                    ▶️ Старт программы
+                </button>
+                <button class="btn-pause" onclick="pauseProgram()">
+                    ⏸️ Пауза программы
+                </button>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Секция смены штативов -->
+        <div class="button-section">
+            <div class="section-title">Смена штативов</div>
+            <div class="button-column">
+                <button class="btn-rack" onclick="changeRackUGI()">
+                    🧪 Смена штатива с УГИ
+                </button>
+                <button class="btn-rack" onclick="changeRackVPCH()">
+                    🧪 Смена штатива с ВПЧ
+                </button>
+                <button class="btn-rack" onclick="changeRackBoth()">
+                    🧪 Смена штатива с УГИ + ВПЧ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function goToSettings() {
+            window.location.href = 'matrices.html';
+        }
+
+        function startProgram() {
+            alert('Программа запущена');
+            // Здесь можно добавить логику запуска программы
+        }
+
+        function pauseProgram() {
+            alert('Программа приостановлена');
+            // Здесь можно добавить логику паузы программы
+        }
+
+        function changeRackUGI() {
+            alert('Смена штатива с УГИ');
+            // Здесь можно добавить логику смены штатива УГИ
+        }
+
+        function changeRackVPCH() {
+            alert('Смена штатива с ВПЧ');
+            // Здесь можно добавить логику смены штатива ВПЧ
+        }
+
+        function changeRackBoth() {
+            alert('Смена штатива с УГИ + ВПЧ');
+            // Здесь можно добавить логику смены штатива УГИ + ВПЧ
+        }
+    </script>
+</body>
+</html>
