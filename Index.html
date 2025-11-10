@@ -4,147 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Система штативов</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        .container {
-            background: white;
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            text-align: center;
-            max-width: 700px;
-            width: 90%;
-        }
-
-        h1 {
-            color: #333;
-            margin-bottom: 30px;
-            font-size: 32px;
-        }
-
-        .icon {
-            font-size: 64px;
-            margin-bottom: 20px;
-        }
-
-        .button-section {
-            margin-bottom: 30px;
-        }
-
-        .section-title {
-            color: #666;
-            font-size: 14px;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin-bottom: 15px;
-            letter-spacing: 1px;
-        }
-
-        .button-row {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-bottom: 15px;
-        }
-
-        .button-column {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            align-items: stretch;
-        }
-
-        button {
-            padding: 15px 30px;
-            font-size: 16px;
-            cursor: pointer;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            transition: all 0.3s;
-            font-weight: bold;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-            min-width: 200px;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        .btn-settings {
-            background-color: #9b59b6;
-        }
-
-        .btn-settings:hover {
-            background-color: #8e44ad;
-        }
-
-        .btn-start {
-            background-color: #27ae60;
-        }
-
-        .btn-start:hover {
-            background-color: #229954;
-        }
-
-        .btn-pause {
-            background-color: #e67e22;
-        }
-
-        .btn-pause:hover {
-            background-color: #d35400;
-        }
-
-        .btn-rack {
-            background-color: #3498db;
-        }
-
-        .btn-rack:hover {
-            background-color: #2980b9;
-        }
-
-        .divider {
-            height: 2px;
-            background: linear-gradient(to right, transparent, #ddd, transparent);
-            margin: 30px 0;
-        }
-
-        .status-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-
-        .status-ready {
-            background-color: #27ae60;
-        }
-
-        .status-paused {
-            background-color: #e67e22;
-        }
-
-        .status-stopped {
-            background-color: #95a5a6;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
@@ -189,34 +49,122 @@
     </div>
 
     <script>
+        // API URL
+        const API_URL = 'http://localhost:5000/api';
+
+        // Обновление статуса робота
+        async function updateStatus() {
+            try {
+                const response = await fetch(`${API_URL}/robot_status`);
+                const data = await response.json();
+                
+                // Обновляем индикаторы статуса (если нужно)
+                console.log('Статус робота:', data);
+            } catch (error) {
+                console.error('Ошибка получения статуса:', error);
+            }
+        }
+
         function goToSettings() {
             window.location.href = 'matrices.html';
         }
 
-        function startProgram() {
-            alert('Программа запущена');
-            // Здесь можно добавить логику запуска программы
+        async function startProgram() {
+            try {
+                const response = await fetch(`${API_URL}/start_program`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✓ ' + data.message);
+                } else {
+                    alert('✗ ' + data.message);
+                }
+            } catch (error) {
+                alert('✗ Ошибка связи с сервером: ' + error);
+            }
         }
 
-        function pauseProgram() {
-            alert('Программа приостановлена');
-            // Здесь можно добавить логику паузы программы
+        async function pauseProgram() {
+            try {
+                const response = await fetch(`${API_URL}/pause_program`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✓ ' + data.message);
+                } else {
+                    alert('✗ ' + data.message);
+                }
+            } catch (error) {
+                alert('✗ Ошибка связи с сервером: ' + error);
+            }
         }
 
-        function changeRackUGI() {
-            alert('Смена штатива с УГИ');
-            // Здесь можно добавить логику смены штатива УГИ
+        async function changeRackUGI() {
+            try {
+                const response = await fetch(`${API_URL}/change_rack`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({type: 'ugi'})
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✓ ' + data.message);
+                } else {
+                    alert('✗ ' + data.message);
+                }
+            } catch (error) {
+                alert('✗ Ошибка связи с сервером: ' + error);
+            }
         }
 
-        function changeRackVPCH() {
-            alert('Смена штатива с ВПЧ');
-            // Здесь можно добавить логику смены штатива ВПЧ
+        async function changeRackVPCH() {
+            try {
+                const response = await fetch(`${API_URL}/change_rack`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({type: 'vpch'})
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✓ ' + data.message);
+                } else {
+                    alert('✗ ' + data.message);
+                }
+            } catch (error) {
+                alert('✗ Ошибка связи с сервером: ' + error);
+            }
         }
 
-        function changeRackBoth() {
-            alert('Смена штатива с УГИ + ВПЧ');
-            // Здесь можно добавить логику смены штатива УГИ + ВПЧ
+        async function changeRackBoth() {
+            try {
+                const response = await fetch(`${API_URL}/change_rack`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({type: 'both'})
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✓ ' + data.message);
+                } else {
+                    alert('✗ ' + data.message);
+                }
+            } catch (error) {
+                alert('✗ Ошибка связи с сервером: ' + error);
+            }
         }
+
+        // Обновляем статус каждые 2 секунды
+        setInterval(updateStatus, 2000);
+        updateStatus();
     </script>
 </body>
 </html>
