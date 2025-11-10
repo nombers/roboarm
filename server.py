@@ -61,7 +61,7 @@ def start_program():
         def run_program():
             try:
                 import asyncio
-                from main_with_matrix_config import main_async
+                from main import main_async
                 asyncio.run(main_async())
             except Exception as e:
                 print(f"Ошибка программы: {e}")
