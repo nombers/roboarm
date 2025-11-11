@@ -267,7 +267,8 @@ async def scan_pallet_from_matrix(scanner, cobot, test_matrix: TestMatrix,
                                   pallet_id: int, matrix,
                                   start_position: Tuple[float, float, float],
                                   x_step=20.7, y_step=20.7,
-                                  lis_host="127.0.0.1", lis_port=7114):
+                                  lis_host="127.0.0.1", lis_port=7114,
+                                  controller=None):
     """
     Сканирует паллет согласно матрице из matrix_data.py.
     Сканирует по 3 пробирки за раз (колонки 0-2, затем 3-5).
@@ -282,6 +283,11 @@ async def scan_pallet_from_matrix(scanner, cobot, test_matrix: TestMatrix,
 
     # Проходим по рядам
     for row in range(len(matrix)):
+        # Проверка паузы через контроллер
+        if controller and not controller.check_pause():
+            logger.warning("Сканирование прервано паузой")
+            return
+        
         # Сканируем колонки 0-2
         if any(matrix[row][col] == 1 for col in range(3)):
             x = start_x + row * x_step
@@ -391,23 +397,45 @@ def move_to_pause_position(cobot, pause_position: Tuple[float, float, float]):
         return False
 
 
-def wait_for_rack_replacement(rack_id: int, rack_type: str = "назначения"):
+def wait_for_rack_replacement(rack_id: int, rack_type: str = "назначения", controller=None):
     """
     Останавливает программу и ждёт замены штатива.
-    Пользователь нажимает Enter когда штатив заменён.
+    Если передан controller, использует его для ожидания замены через веб.
+    Иначе ждёт Enter в консоли.
     """
-    print("\n" + "="*100)
-    print(f"⚠ ШТАТИВ {rack_type.upper()} #{rack_id} ЗАПОЛНЕН - ТРЕБУЕТСЯ ЗАМЕНА")
-    print("="*100)
-    print(f"1. Извлеките заполненный штатив {rack_type} #{rack_id}")
-    print(f"2. Установите новый пустой штатив {rack_type} #{rack_id}")
-    print(f"3. Нажмите Enter для продолжения...")
-    print("="*100)
-    
-    input()  # Ждём нажатия Enter
-    
-    print("✓ Продолжаем работу")
-    print("="*100 + "\n")
+    if controller:
+        # Определяем тип штатива для веб-интерфейса
+        rack_type_web = 'both' if 'и' in rack_type else rack_type.split()[0].lower()
+        
+        print("\n" + "="*100)
+        print(f"⚠ ШТАТИВ {rack_type.upper()} #{rack_id} ЗАПОЛНЕН - ТРЕБУЕТСЯ ЗАМЕНА")
+        print("="*100)
+        print("Замените штатив через веб-интерфейс или нажмите Enter здесь...")
+        print("="*100)
+        
+        # Используем контроллер для ожидания
+        if controller.wait_for_rack_replacement(rack_type_web):
+            print("✓ Продолжаем работу")
+            print("="*100 + "\n")
+            return True
+        else:
+            print("✗ Таймаут замены штатива")
+            return False
+    else:
+        # Старый способ через input()
+        print("\n" + "="*100)
+        print(f"⚠ ШТАТИВ {rack_type.upper()} #{rack_id} ЗАПОЛНЕН - ТРЕБУЕТСЯ ЗАМЕНА")
+        print("="*100)
+        print(f"1. Извлеките заполненный штатив {rack_type} #{rack_id}")
+        print(f"2. Установите новый пустой штатив {rack_type} #{rack_id}")
+        print(f"3. Нажмите Enter для продолжения...")
+        print("="*100)
+        
+        input()
+        
+        print("✓ Продолжаем работу")
+        print("="*100 + "\n")
+        return True
 
 
 def sort_pallet_from_matrix(cobot, test_matrix: TestMatrix,
@@ -416,13 +444,15 @@ def sort_pallet_from_matrix(cobot, test_matrix: TestMatrix,
                             dest_positions: Dict[int, Tuple[float, float, float]],
                             pause_position: Tuple[float, float, float] = None,
                             rack_capacity: int = 60,
-                            tube_spacing_x=20.7, tube_spacing_y=20.7):
+                            tube_spacing_x=20.7, tube_spacing_y=20.7,
+                            controller=None):
     """
     Сортирует пробирки с одного паллета согласно матрице тестов.
     
     Args:
         pause_position: Позиция робота во время замены штатива (x, y, z)
         rack_capacity: Максимальная вместимость штатива назначения (по умолчанию 60)
+        controller: RobotController для проверки команд из веб-интерфейса
     """
     source_x, source_y, source_z = source_position
     tubes = test_matrix.get_tubes_by_source_pallet(source_pallet_id)
@@ -439,6 +469,11 @@ def sort_pallet_from_matrix(cobot, test_matrix: TestMatrix,
     rack_fill_count = {}
 
     for i, tube in enumerate(tubes, 1):
+        # Проверка паузы через контроллер
+        if controller and not controller.check_pause():
+            logger.warning("Сортировка прервана паузой")
+            return
+        
         print(f"\n[{i}/{len(tubes)}] {tube.barcode} ({tube.test_type.value})")
         print(f"  Из: П{tube.source_pallet} [{tube.row}][{tube.col}]")
         print(f"  В:  П{tube.destination_rack} [{tube.destination_row}][{tube.destination_col}]")
@@ -457,7 +492,9 @@ def sort_pallet_from_matrix(cobot, test_matrix: TestMatrix,
                 move_to_pause_position(cobot, pause_position)
             
             # Ждём замены штатива
-            wait_for_rack_replacement(dest_rack_id, "назначения")
+            if not wait_for_rack_replacement(dest_rack_id, "назначения", controller):
+                logger.error("Замена штатива не подтверждена, прерываем сортировку")
+                return
             
             # Сбрасываем счётчик
             rack_fill_count[dest_rack_id] = 0
@@ -535,6 +572,15 @@ def disconnect_devices(scanner, cobot):
 
 async def main_async():
     """Основная асинхронная функция программы."""
+    
+    # ========== ИНТЕГРАЦИЯ С ROBOT_CONTROLLER ==========
+    from robot_controller import get_controller
+    controller = get_controller()
+    
+    # Устанавливаем что программа запущена
+    controller.set_running(True)
+    
+    logger.info("Программа запущена через robot_controller")
 
     # ========== КОНФИГУРАЦИЯ ==========
     
@@ -620,7 +666,8 @@ async def main_async():
                 x_step=X_STEP,
                 y_step=Y_STEP,
                 lis_host=LIS_HOST,
-                lis_port=LIS_PORT
+                lis_port=LIS_PORT,
+                controller=controller
             )
 
         test_matrix.print_matrix()
@@ -643,7 +690,8 @@ async def main_async():
                 pause_position=PAUSE_POSITION,
                 rack_capacity=RACK_CAPACITY,
                 tube_spacing_x=X_STEP,
-                tube_spacing_y=Y_STEP
+                tube_spacing_y=Y_STEP,
+                controller=controller
             )
 
         print("\n" + "=" * 100)
@@ -657,6 +705,7 @@ async def main_async():
         import traceback
         traceback.print_exc()
     finally:
+        controller.set_running(False)
         disconnect_devices(scanner, cobot)
 
 
