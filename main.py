@@ -602,13 +602,13 @@ async def main_async():
             'matrix': matrix1,  # ← Используем данные из matrix_data.py
             'scan_position': (175, 280, 200),
             'sort_position': (129, 317, 148),
-        },
-        {
-            'id': 1,
-            'matrix': matrix2,  # ← Используем данные из matrix_data.py
-            'scan_position': (175, 500, 200),
-            'sort_position': (129, 537, 148),
-        },
+        }
+        # {
+        #     'id': 1,
+        #     'matrix': matrix2,  # ← Используем данные из matrix_data.py
+        #     'scan_position': (175, 500, 200),
+        #     'sort_position': (129, 537, 148),
+        # },
     ]
 
     # Паллеты назначения
@@ -618,7 +618,7 @@ async def main_async():
     }
 
     # Позиция паузы для замены штатива (робот встаёт в эту позицию)
-    PAUSE_POSITION = (0, 400, 300)  # ← Измени на свою позицию
+    PAUSE_POSITION = (-512, 310, 195)  # ← Измени на свою позицию
     
     # Вместимость штатива назначения (по умолчанию 10x6 = 60)
     RACK_CAPACITY = 60

@@ -13,37 +13,11 @@ import time
 app = Flask(__name__)
 CORS(app)
 
-SAVE_DIRECTORY = r"C:\Users\konsentik\Desktop\wtf\roboarm"
+SAVE_DIRECTORY = r"C:\Users\konse\Desktop\wtf\roboarm"
 os.makedirs(SAVE_DIRECTORY, exist_ok=True)
 
 # Получаем контроллер
 controller = get_controller()
-
-# НАСТРОЙ ПОЗИЦИИ РОБОТА!
-POSITIONS = {
-    'start': (0, 300, 250),
-    'pause': (0, 400, 300),
-    'rack_ugi': (-93, 317, 250),
-    'rack_vpch': (-315, 317, 250),
-}
-
-
-def move_robot_to_position(cobot, position_name):
-    """Перемещает робота в заданную позицию"""
-    try:
-        if position_name not in POSITIONS:
-            return False
-        
-        x, y, z = POSITIONS[position_name]
-        cobot.set_number_register(1, x)
-        cobot.set_number_register(2, y)
-        cobot.set_number_register(3, z)
-        cobot.start_program("Motion")
-        time.sleep(2)
-        return True
-    except Exception as e:
-        print(f"Ошибка перемещения: {e}")
-        return False
 
 
 @app.route('/api/start_program', methods=['POST'])
@@ -191,9 +165,4 @@ if __name__ == '__main__':
     print("="*70)
     print(f"Файлы: {SAVE_DIRECTORY}")
     print("Браузер: http://localhost:5000")
-    print("="*70)
-    print("\n⚙️ НАСТРОЙ ПОЗИЦИИ В КОДЕ:")
-    for name, pos in POSITIONS.items():
-        print(f"  {name}: {pos}")
-    print("="*70)
     app.run(debug=True, port=5000, host='0.0.0.0')
