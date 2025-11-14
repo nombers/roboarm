@@ -58,11 +58,11 @@ def pause_program():
         if not controller.is_running():
             return jsonify({'success': False, 'message': 'Программа не запущена'})
         
-        # Устанавливаем паузу через контроллер
-        controller.set_paused(True)
+        # Устанавливаем флаг запроса паузы
+        controller.set_pause_requested()
         controller.set_command('pause')
         
-        return jsonify({'success': True, 'message': 'Программа будет приостановлена'})
+        return jsonify({'success': True, 'message': 'Запрос паузы отправлен'})
     
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
@@ -162,6 +162,15 @@ def save_matrix():
 
 
 if __name__ == '__main__':
+    # Удаляем robot_state.json при запуске
+    state_file = 'robot_state.json'
+    if os.path.exists(state_file):
+        try:
+            os.remove(state_file)
+            print(f"✓ Файл {state_file} удалён")
+        except Exception as e:
+            print(f"⚠ Не удалось удалить {state_file}: {e}")
+    
     print("="*70)
     print(f"Файлы: {SAVE_DIRECTORY}")
     print("Браузер: http://localhost:5000")

@@ -116,6 +116,14 @@ body {
     background-color: #d35400;
 }
 
+.container .btn-resume {
+    background-color: #16a085;
+}
+
+.container .btn-resume:hover {
+    background-color: #138d75;
+}
+
 .container .btn-rack {
     background-color: #3498db;
 }

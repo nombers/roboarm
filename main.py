@@ -239,9 +239,15 @@ def move_robot_by_registers(cobot, dx=0, dy=0, dz=0, program_name="Motion"):
         return False
 
 
-def scan_three_positions(scanner, cobot, x, y, z, program_name="Motion"):
+def scan_three_positions(scanner, cobot, x, y, z, row, cols_range, matrix, program_name="Motion", max_attempts=10):
     """
     Сканирует три пробирки подряд и возвращает список из трёх баркодов.
+    
+    Args:
+        row: Номер ряда для проверки матрицы
+        cols_range: Кортеж (start_col, end_col) - какие колонки сканируем (0-2 или 3-5)
+        matrix: Матрица для проверки наличия пробирок
+        max_attempts: Максимальное количество попыток сканирования (по умолчанию 10)
     
     Returns:
         List[str]: Список из трёх баркодов или 'NoRead' для каждой позиции
@@ -249,18 +255,69 @@ def scan_three_positions(scanner, cobot, x, y, z, program_name="Motion"):
     if not move_robot_by_registers(cobot, dx=x, dy=y, dz=z, program_name=program_name):
         return ['NoRead', 'NoRead', 'NoRead']
     
-    try:
-        result = scanner.scan(timeout=0.2)
-        if result and result != 'NoRead':
-            barcodes = result.split(';')
-            # Дополняем до 3 элементов если нужно
-            while len(barcodes) < 3:
-                barcodes.append('NoRead')
-            return barcodes[:3]  # Берём только первые 3
+    start_col, end_col = cols_range
+    expected_tubes = [matrix[row][col] == 1 for col in range(start_col, end_col)]
+    
+    # Если нет ожидаемых пробирок - не пытаемся сканировать
+    if not any(expected_tubes):
         return ['NoRead', 'NoRead', 'NoRead']
-    except Exception as e:
-        logger.error(f"Ошибка сканирования: {e}")
-        return ['NoRead', 'NoRead', 'NoRead']
+    
+    best_result = ['NoRead', 'NoRead', 'NoRead']
+    
+    for attempt in range(1, max_attempts + 1):
+        try:
+            result = scanner.scan(timeout=0.2)
+            if result and result != 'NoRead':
+                barcodes = result.split(';')
+                # Дополняем до 3 элементов если нужно
+                while len(barcodes) < 3:
+                    barcodes.append('NoRead')
+                current_result = barcodes[:3]
+                
+                # Проверяем сколько пробирок мы нашли из тех что ожидали
+                found_count = 0
+                expected_count = 0
+                for i, (barcode, expected) in enumerate(zip(current_result, expected_tubes)):
+                    if expected:
+                        expected_count += 1
+                        if barcode != 'NoRead':
+                            found_count += 1
+                
+                # Обновляем best_result если текущий результат лучше
+                best_found = sum(1 for i, (b, e) in enumerate(zip(best_result, expected_tubes)) 
+                                if e and b != 'NoRead')
+                if found_count > best_found:
+                    best_result = current_result
+                
+                # Если нашли все ожидаемые - успех!
+                if found_count == expected_count:
+                    logger.info(f"✓ Сканирование успешно с попытки #{attempt}: {found_count}/{expected_count} пробирок")
+                    return current_result
+                
+                if attempt < max_attempts:
+                    logger.warning(f"⚠ Попытка {attempt}/{max_attempts}: {found_count}/{expected_count} пробирок, повтор...")
+                    time.sleep(0.1)
+            else:
+                if attempt < max_attempts:
+                    logger.warning(f"✗ Попытка {attempt}/{max_attempts}: NoRead, повтор...")
+                    time.sleep(0.1)
+            
+        except Exception as e:
+            logger.error(f"Ошибка сканирования (попытка {attempt}): {e}")
+            if attempt < max_attempts:
+                time.sleep(0.1)
+    
+    # Возвращаем лучший результат
+    best_found = sum(1 for i, (b, e) in enumerate(zip(best_result, expected_tubes)) 
+                    if e and b != 'NoRead')
+    expected_count = sum(expected_tubes)
+    
+    if best_found > 0:
+        logger.warning(f"⚠ Лучший результат после {max_attempts} попыток: {best_found}/{expected_count} пробирок")
+    else:
+        logger.error(f"✗ Не удалось отсканировать ни одной пробирки после {max_attempts} попыток")
+    
+    return best_result
 
 
 async def scan_pallet_from_matrix(scanner, cobot, test_matrix: TestMatrix,
@@ -268,7 +325,7 @@ async def scan_pallet_from_matrix(scanner, cobot, test_matrix: TestMatrix,
                                   start_position: Tuple[float, float, float],
                                   x_step=20.7, y_step=20.7,
                                   lis_host="127.0.0.1", lis_port=7114,
-                                  controller=None):
+                                  controller=None, pause_position=None):
     """
     Сканирует паллет согласно матрице из matrix_data.py.
     Сканирует по 3 пробирки за раз (колонки 0-2, затем 3-5).
@@ -284,7 +341,7 @@ async def scan_pallet_from_matrix(scanner, cobot, test_matrix: TestMatrix,
     # Проходим по рядам
     for row in range(len(matrix)):
         # Проверка паузы через контроллер
-        if controller and not controller.check_pause():
+        if controller and not controller.check_pause(cobot, pause_position):
             logger.warning("Сканирование прервано паузой")
             return
         
@@ -295,7 +352,7 @@ async def scan_pallet_from_matrix(scanner, cobot, test_matrix: TestMatrix,
             z = start_z
             
             logger.info(f"Сканирование П{pallet_id} Ряд {row}, колонки 0-2")
-            barcodes_0_2 = scan_three_positions(scanner, cobot, x, y, z)
+            barcodes_0_2 = scan_three_positions(scanner, cobot, x, y, z, row, (0, 3), matrix)
             
             # Обрабатываем каждую пробирку
             for col in range(3):
@@ -317,7 +374,7 @@ async def scan_pallet_from_matrix(scanner, cobot, test_matrix: TestMatrix,
             z = start_z
             
             logger.info(f"Сканирование П{pallet_id} Ряд {row}, колонки 3-5")
-            barcodes_3_5 = scan_three_positions(scanner, cobot, x, y, z)
+            barcodes_3_5 = scan_three_positions(scanner, cobot, x, y, z, row, (3, 6), matrix)
             
             # Обрабатываем каждую пробирку
             for col_offset in range(3):
@@ -470,7 +527,7 @@ def sort_pallet_from_matrix(cobot, test_matrix: TestMatrix,
 
     for i, tube in enumerate(tubes, 1):
         # Проверка паузы через контроллер
-        if controller and not controller.check_pause():
+        if controller and not controller.check_pause(cobot, pause_position):
             logger.warning("Сортировка прервана паузой")
             return
         
@@ -667,7 +724,8 @@ async def main_async():
                 y_step=Y_STEP,
                 lis_host=LIS_HOST,
                 lis_port=LIS_PORT,
-                controller=controller
+                controller=controller,
+                pause_position=PAUSE_POSITION
             )
 
         test_matrix.print_matrix()

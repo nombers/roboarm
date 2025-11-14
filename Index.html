@@ -26,6 +26,9 @@
                 <button class="btn-pause" onclick="pauseProgram()">
                     ⏸️ Пауза программы
                 </button>
+                <button class="btn-resume" onclick="resumeProgram()">
+                    ▶️ Продолжить программу
+                </button>
             </div>
         </div>
 
@@ -90,6 +93,24 @@
         async function pauseProgram() {
             try {
                 const response = await fetch(`${API_URL}/pause_program`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✓ ' + data.message);
+                } else {
+                    alert('✗ ' + data.message);
+                }
+            } catch (error) {
+                alert('✗ Ошибка связи с сервером: ' + error);
+            }
+        }
+
+        async function resumeProgram() {
+            try {
+                const response = await fetch(`${API_URL}/resume_program`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'}
                 });

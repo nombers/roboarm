@@ -21,6 +21,7 @@ class RobotController:
             'rack_to_change': None,  # 'ugi', 'vpch', 'both'
             'current_pallet': 0,
             'rack_replaced': False,  # Флаг что штатив заменён
+            'pause_requested': False,  # Новый флаг для запроса паузы
         }
         self.load_state()
     
@@ -71,10 +72,30 @@ class RobotController:
             self.load_state()
             return self.state.get('paused', False)
     
+    def is_pause_requested(self):
+        """Проверка запроса паузы (ещё не обработан)"""
+        with self.lock:
+            self.load_state()
+            return self.state.get('pause_requested', False)
+    
+    def set_pause_requested(self):
+        """Установить флаг запроса паузы"""
+        with self.lock:
+            self.state['pause_requested'] = True
+            self.save_state()
+    
+    def clear_pause_request(self):
+        """Очистить флаг запроса паузы"""
+        with self.lock:
+            self.state['pause_requested'] = False
+            self.save_state()
+    
     def set_paused(self, value):
         """Установить паузу"""
         with self.lock:
             self.state['paused'] = value
+            if value:
+                self.state['pause_requested'] = False
             self.save_state()
     
     def get_rack_to_change(self):
@@ -132,16 +153,46 @@ class RobotController:
             print("✗ Таймаут ожидания замены штатива")
             return False
     
-    def check_pause(self):
-        """Проверить паузу и ждать если нужно"""
+    def check_pause(self, cobot=None, pause_position=None):
+        """
+        Проверить паузу и обработать её.
+        
+        Args:
+            cobot: Ссылка на робота для перемещения
+            pause_position: Позиция паузы (x, y, z)
+        
+        Returns:
+            True если продолжаем, False если ошибка
+        """
+        # Если был запрос паузы - обработаем его
+        if self.is_pause_requested():
+            print("\n⏸ ЗАПРОС ПАУЗЫ - перемещение в позицию паузы...")
+            
+            # Двигаем робота в позицию паузы
+            if cobot and pause_position:
+                try:
+                    from main import move_robot_by_registers
+                    x, y, z = pause_position
+                    if move_robot_by_registers(cobot, dx=x, dy=y, dz=z):
+                        print("✓ Робот в позиции паузы")
+                    else:
+                        print("✗ Ошибка перемещения в позицию паузы")
+                except Exception as e:
+                    print(f"✗ Ошибка при перемещении: {e}")
+            
+            # Теперь ставим на паузу
+            self.set_paused(True)
+            print("⏸ Программа на паузе...")
+        
+        # Если на паузе - ждём
         if self.is_paused():
-            print("\n⏸ Программа на паузе...")
             if self.wait_for_pause_clear():
                 print("▶ Продолжаем работу")
                 return True
             else:
                 print("✗ Таймаут паузы")
                 return False
+        
         return True
     
     def reset(self):
@@ -154,6 +205,7 @@ class RobotController:
                 'rack_to_change': None,
                 'current_pallet': 0,
                 'rack_replaced': False,
+                'pause_requested': False,
             }
             self.save_state()
 
