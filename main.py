@@ -15,11 +15,11 @@ try:
     MATRIX_ROWS = ROWS
     MATRIX_COLS = COLS
 except ImportError:
-    print("⚠ Файл matrix_data.py не найден. Используем полную матрицу 10x6.")
-    matrix1 = [[1 for _ in range(6)] for _ in range(10)]
-    matrix2 = [[1 for _ in range(6)] for _ in range(10)]
+    print("⚠ Файл matrix_data.py не найден. Используем полную матрицу 10x5.")
+    matrix1 = [[1 for _ in range(5)] for _ in range(10)]
+    matrix2 = [[1 for _ in range(5)] for _ in range(10)]
     MATRIX_ROWS = 10
-    MATRIX_COLS = 6
+    MATRIX_COLS = 5
 
 # Настройка логирования
 logging.basicConfig(
@@ -31,11 +31,10 @@ logger = logging.getLogger(__name__)
 
 class TestType(Enum):
     """Типы тестов"""
-    UGI = "ugi"
-    VPCH = "vpch"
-    UGI_VPCH = "ugi+vpch"
-    GENERAL = "general"
-    BUFFER = "buffer"
+    UGI = "pcr-1"           # УГИ
+    VPCH = "pcr-2"          # ВПЧ
+    UGI_VPCH = "pcr-1+pcr-2"  # УГИ + ВПЧ
+    OTHER = "pcr"           # Разное
     ERROR = "error"
     UNKNOWN = "unknown"
 
@@ -44,7 +43,7 @@ class TestType(Enum):
 class TubeInfo:
     """Информация о пробирке"""
     barcode: str
-    source_pallet: int  # Номер исходного паллета
+    source_pallet: int
     row: int
     col: int
     test_type: TestType
@@ -56,7 +55,7 @@ class TubeInfo:
 class TestMatrix:
     """Класс для управления матрицей тестов и распределением пробирок по паллетам."""
 
-    def __init__(self, test_types: List[TestType], rack_capacity=(10, 6)):
+    def __init__(self, test_types: List[TestType], rack_capacity=(10, 5)):
         if not (2 <= len(test_types) <= 6):
             raise ValueError("Количество типов тестов должно быть от 2 до 6")
 
@@ -130,16 +129,48 @@ class TestMatrix:
         print("\n" + "=" * 100)
         print(f"ВСЕГО ПРОБИРОК: {len(self.tubes)}")
         print("=" * 100)
-
-
-def get_active_positions(matrix):
-    """Возвращает список активных позиций (где matrix[i][j] == 1)"""
-    positions = []
-    for row in range(len(matrix)):
-        for col in range(len(matrix[0])):
-            if matrix[row][col] == 1:
-                positions.append((row, col))
-    return positions
+    
+    def save_to_file(self, filename='robot_data.json'):
+        """Сохраняет баркоды в файл для веб-интерфейса"""
+        import json
+        
+        barcodes_data = {}
+        rack_type_map = {
+            TestType.UGI: 'ugi',
+            TestType.VPCH: 'vpch',
+            TestType.UGI_VPCH: 'both',
+            TestType.OTHER: 'other'
+        }
+        
+        for test_type, rack_name in rack_type_map.items():
+            if test_type in self.racks:
+                barcodes_data[rack_name] = {}
+                rack_id = self.test_types.index(test_type)
+                tubes_list = []
+                
+                for row in self.racks[test_type]:
+                    for tube in row:
+                        if tube is not None:
+                            tubes_list.append(tube.barcode)
+                
+                if tubes_list:
+                    barcodes_data[rack_name][rack_id] = tubes_list
+        
+        # Считаем штативы
+        rack_counts = {
+            'ugi': sum(1 for t in self.test_types if t == TestType.UGI),
+            'vpch': sum(1 for t in self.test_types if t == TestType.VPCH),
+            'both': sum(1 for t in self.test_types if t == TestType.UGI_VPCH),
+            'other': sum(1 for t in self.test_types if t == TestType.OTHER)
+        }
+        
+        data = {
+            'barcodes': barcodes_data,
+            'rack_counts': rack_counts
+        }
+        
+        with open(filename, 'w') as f:
+            json.dump(data, f, indent=2)
 
 
 async def get_tube_info_async(barcode: str, host: str = "127.0.0.1", port: int = 7114) -> Optional[Dict]:
@@ -175,17 +206,20 @@ def parse_test_type(response: Optional[Dict]) -> TestType:
     if not test_codes:
         return TestType.UNKNOWN
 
-    test_code = test_codes[0].lower()
+    # Нормализуем коды
+    codes_set = set(code.lower().strip() for code in test_codes)
 
-    test_map = {
-        "ugi": TestType.UGI,
-        "vpch": TestType.VPCH,
-        "ugi+vpch": TestType.UGI_VPCH,
-        "general": TestType.GENERAL,
-        "buffer": TestType.BUFFER,
-        "error": TestType.ERROR,
-    }
-    return test_map.get(test_code, TestType.UNKNOWN)
+    # Проверяем комбинации
+    if "pcr-1" in codes_set and "pcr-2" in codes_set:
+        return TestType.UGI_VPCH
+    elif "pcr-1" in codes_set:
+        return TestType.UGI
+    elif "pcr-2" in codes_set:
+        return TestType.VPCH
+    elif "pcr" in codes_set:
+        return TestType.OTHER
+    else:
+        return TestType.UNKNOWN
 
 
 async def process_tube_async(barcode: str, source_pallet: int, row: int, col: int,
@@ -240,25 +274,13 @@ def move_robot_by_registers(cobot, dx=0, dy=0, dz=0, program_name="Motion"):
 
 
 def scan_three_positions(scanner, cobot, x, y, z, row, cols_range, matrix, program_name="Motion", max_attempts=10):
-    """
-    Сканирует три пробирки подряд и возвращает список из трёх баркодов.
-    
-    Args:
-        row: Номер ряда для проверки матрицы
-        cols_range: Кортеж (start_col, end_col) - какие колонки сканируем (0-2 или 3-5)
-        matrix: Матрица для проверки наличия пробирок
-        max_attempts: Максимальное количество попыток сканирования (по умолчанию 10)
-    
-    Returns:
-        List[str]: Список из трёх баркодов или 'NoRead' для каждой позиции
-    """
+    """Сканирует три пробирки подряд и возвращает список из трёх баркодов."""
     if not move_robot_by_registers(cobot, dx=x, dy=y, dz=z, program_name=program_name):
         return ['NoRead', 'NoRead', 'NoRead']
     
     start_col, end_col = cols_range
     expected_tubes = [matrix[row][col] == 1 for col in range(start_col, end_col)]
     
-    # Если нет ожидаемых пробирок - не пытаемся сканировать
     if not any(expected_tubes):
         return ['NoRead', 'NoRead', 'NoRead']
     
@@ -269,12 +291,10 @@ def scan_three_positions(scanner, cobot, x, y, z, row, cols_range, matrix, progr
             result = scanner.scan(timeout=0.2)
             if result and result != 'NoRead':
                 barcodes = result.split(';')
-                # Дополняем до 3 элементов если нужно
                 while len(barcodes) < 3:
                     barcodes.append('NoRead')
                 current_result = barcodes[:3]
                 
-                # Проверяем сколько пробирок мы нашли из тех что ожидали
                 found_count = 0
                 expected_count = 0
                 for i, (barcode, expected) in enumerate(zip(current_result, expected_tubes)):
@@ -283,13 +303,11 @@ def scan_three_positions(scanner, cobot, x, y, z, row, cols_range, matrix, progr
                         if barcode != 'NoRead':
                             found_count += 1
                 
-                # Обновляем best_result если текущий результат лучше
                 best_found = sum(1 for i, (b, e) in enumerate(zip(best_result, expected_tubes)) 
                                 if e and b != 'NoRead')
                 if found_count > best_found:
                     best_result = current_result
                 
-                # Если нашли все ожидаемые - успех!
                 if found_count == expected_count:
                     logger.info(f"✓ Сканирование успешно с попытки #{attempt}: {found_count}/{expected_count} пробирок")
                     return current_result
@@ -307,7 +325,6 @@ def scan_three_positions(scanner, cobot, x, y, z, row, cols_range, matrix, progr
             if attempt < max_attempts:
                 time.sleep(0.1)
     
-    # Возвращаем лучший результат
     best_found = sum(1 for i, (b, e) in enumerate(zip(best_result, expected_tubes)) 
                     if e and b != 'NoRead')
     expected_count = sum(expected_tubes)
@@ -326,10 +343,7 @@ async def scan_pallet_from_matrix(scanner, cobot, test_matrix: TestMatrix,
                                   x_step=20.7, y_step=20.7,
                                   lis_host="127.0.0.1", lis_port=7114,
                                   controller=None, pause_position=None):
-    """
-    Сканирует паллет согласно матрице из matrix_data.py.
-    Сканирует по 3 пробирки за раз (колонки 0-2, затем 3-5).
-    """
+    """Сканирует паллет согласно матрице из matrix_data.py."""
     start_x, start_y, start_z = start_position
     
     logger.info("=" * 80)
@@ -338,9 +352,7 @@ async def scan_pallet_from_matrix(scanner, cobot, test_matrix: TestMatrix,
 
     tasks = []
 
-    # Проходим по рядам
     for row in range(len(matrix)):
-        # Проверка паузы через контроллер
         if controller and not controller.check_pause(cobot, pause_position):
             logger.warning("Сканирование прервано паузой")
             return
@@ -348,15 +360,14 @@ async def scan_pallet_from_matrix(scanner, cobot, test_matrix: TestMatrix,
         # Сканируем колонки 0-2
         if any(matrix[row][col] == 1 for col in range(3)):
             x = start_x + row * x_step
-            y = start_y  # Первые три колонки
+            y = start_y
             z = start_z
             
             logger.info(f"Сканирование П{pallet_id} Ряд {row}, колонки 0-2")
             barcodes_0_2 = scan_three_positions(scanner, cobot, x, y, z, row, (0, 3), matrix)
             
-            # Обрабатываем каждую пробирку
             for col in range(3):
-                if matrix[row][col] == 1:  # Проверяем что позиция активна в матрице
+                if matrix[row][col] == 1:
                     barcode = barcodes_0_2[col]
                     if barcode and barcode != 'NoRead':
                         logger.info(f"  ✓ [{row}][{col}]: {barcode}")
@@ -367,20 +378,19 @@ async def scan_pallet_from_matrix(scanner, cobot, test_matrix: TestMatrix,
                     else:
                         logger.warning(f"  ✗ [{row}][{col}]: NoRead (ожидалась пробирка)")
         
-        # Сканируем колонки 3-5
-        if any(matrix[row][col] == 1 for col in range(3, 6)):
+        # Сканируем колонки 3-4 (только 2 пробирки)
+        if any(matrix[row][col] == 1 for col in range(3, 5)):
             x = start_x + row * x_step
-            y = start_y + y_step * 3  # Следующие три колонки
+            y = start_y + y_step * 3
             z = start_z
             
-            logger.info(f"Сканирование П{pallet_id} Ряд {row}, колонки 3-5")
-            barcodes_3_5 = scan_three_positions(scanner, cobot, x, y, z, row, (3, 6), matrix)
+            logger.info(f"Сканирование П{pallet_id} Ряд {row}, колонки 3-4")
+            barcodes_3_4 = scan_three_positions(scanner, cobot, x, y, z, row, (3, 5), matrix)
             
-            # Обрабатываем каждую пробирку
-            for col_offset in range(3):
+            for col_offset in range(2):
                 col = col_offset + 3
-                if matrix[row][col] == 1:  # Проверяем что позиция активна в матрице
-                    barcode = barcodes_3_5[col_offset]
+                if matrix[row][col] == 1:
+                    barcode = barcodes_3_4[col_offset]
                     if barcode and barcode != 'NoRead':
                         logger.info(f"  ✓ [{row}][{col}]: {barcode}")
                         task = asyncio.create_task(
@@ -455,13 +465,8 @@ def move_to_pause_position(cobot, pause_position: Tuple[float, float, float]):
 
 
 def wait_for_rack_replacement(rack_id: int, rack_type: str = "назначения", controller=None):
-    """
-    Останавливает программу и ждёт замены штатива.
-    Если передан controller, использует его для ожидания замены через веб.
-    Иначе ждёт Enter в консоли.
-    """
+    """Останавливает программу и ждёт замены штатива."""
     if controller:
-        # Определяем тип штатива для веб-интерфейса
         rack_type_web = 'both' if 'и' in rack_type else rack_type.split()[0].lower()
         
         print("\n" + "="*100)
@@ -470,7 +475,6 @@ def wait_for_rack_replacement(rack_id: int, rack_type: str = "назначени
         print("Замените штатив через веб-интерфейс или нажмите Enter здесь...")
         print("="*100)
         
-        # Используем контроллер для ожидания
         if controller.wait_for_rack_replacement(rack_type_web):
             print("✓ Продолжаем работу")
             print("="*100 + "\n")
@@ -479,7 +483,6 @@ def wait_for_rack_replacement(rack_id: int, rack_type: str = "назначени
             print("✗ Таймаут замены штатива")
             return False
     else:
-        # Старый способ через input()
         print("\n" + "="*100)
         print(f"⚠ ШТАТИВ {rack_type.upper()} #{rack_id} ЗАПОЛНЕН - ТРЕБУЕТСЯ ЗАМЕНА")
         print("="*100)
@@ -503,14 +506,7 @@ def sort_pallet_from_matrix(cobot, test_matrix: TestMatrix,
                             rack_capacity: int = 60,
                             tube_spacing_x=20.7, tube_spacing_y=20.7,
                             controller=None):
-    """
-    Сортирует пробирки с одного паллета согласно матрице тестов.
-    
-    Args:
-        pause_position: Позиция робота во время замены штатива (x, y, z)
-        rack_capacity: Максимальная вместимость штатива назначения (по умолчанию 60)
-        controller: RobotController для проверки команд из веб-интерфейса
-    """
+    """Сортирует пробирки с одного паллета согласно матрице тестов."""
     source_x, source_y, source_z = source_position
     tubes = test_matrix.get_tubes_by_source_pallet(source_pallet_id)
 
@@ -522,11 +518,9 @@ def sort_pallet_from_matrix(cobot, test_matrix: TestMatrix,
     print(f"СОРТИРОВКА ПАЛЛЕТА #{source_pallet_id} ({len(tubes)} пробирок)")
     print('='*100)
 
-    # Счётчики заполнения штативов назначения
     rack_fill_count = {}
 
     for i, tube in enumerate(tubes, 1):
-        # Проверка паузы через контроллер
         if controller and not controller.check_pause(cobot, pause_position):
             logger.warning("Сортировка прервана паузой")
             return
@@ -535,25 +529,20 @@ def sort_pallet_from_matrix(cobot, test_matrix: TestMatrix,
         print(f"  Из: П{tube.source_pallet} [{tube.row}][{tube.col}]")
         print(f"  В:  П{tube.destination_rack} [{tube.destination_row}][{tube.destination_col}]")
 
-        # Проверяем не заполнен ли штатив назначения
         dest_rack_id = tube.destination_rack
         if dest_rack_id not in rack_fill_count:
             rack_fill_count[dest_rack_id] = 0
         
-        # Если штатив заполнен - пауза для замены
         if rack_fill_count[dest_rack_id] >= rack_capacity:
             logger.info(f"Штатив назначения {dest_rack_id} заполнен ({rack_fill_count[dest_rack_id]} пробирок)")
             
-            # Перемещаемся в позицию паузы
             if pause_position:
                 move_to_pause_position(cobot, pause_position)
             
-            # Ждём замены штатива
             if not wait_for_rack_replacement(dest_rack_id, "назначения", controller):
                 logger.error("Замена штатива не подтверждена, прерываем сортировку")
                 return
             
-            # Сбрасываем счётчик
             rack_fill_count[dest_rack_id] = 0
             logger.info("Счётчик штатива сброшен, продолжаем работу")
 
@@ -582,8 +571,6 @@ def sort_pallet_from_matrix(cobot, test_matrix: TestMatrix,
                 continue
 
             print(f"  ✓ Успешно")
-            
-            # Увеличиваем счётчик успешно размещённых пробирок
             rack_fill_count[dest_rack_id] += 1
 
         except Exception as e:
@@ -630,61 +617,45 @@ def disconnect_devices(scanner, cobot):
 async def main_async():
     """Основная асинхронная функция программы."""
     
-    # ========== ИНТЕГРАЦИЯ С ROBOT_CONTROLLER ==========
     from robot_controller import get_controller
     controller = get_controller()
-    
-    # Устанавливаем что программа запущена
     controller.set_running(True)
-    
     logger.info("Программа запущена через robot_controller")
 
-    # ========== КОНФИГУРАЦИЯ ==========
-    
     # Типы тестов
     test_types = [
-        TestType.UGI,
-        TestType.VPCH,
+        TestType.UGI,       # pcr-1
+        TestType.VPCH,      # pcr-2
+        TestType.UGI_VPCH,  # pcr-1+pcr-2
+        TestType.OTHER,     # pcr (разное)
     ]
 
-    # Сервер ЛИС
     LIS_HOST = "127.0.0.1"
     LIS_PORT = 7114
 
-    # Конфигурация паллетов
-    # matrix1 и matrix2 загружаются из matrix_data.py
     source_pallets_config = [
         {
             'id': 0,
-            'matrix': matrix1,  # ← Используем данные из matrix_data.py
+            'matrix': matrix1,
             'scan_position': (175, 280, 200),
             'sort_position': (129, 317, 148),
         }
-        # {
-        #     'id': 1,
-        #     'matrix': matrix2,  # ← Используем данные из matrix_data.py
-        #     'scan_position': (175, 500, 200),
-        #     'sort_position': (129, 537, 148),
-        # },
     ]
 
     # Паллеты назначения
     dest_positions = {
-        0: (-93, 317, 146),   # УГИ
-        1: (-315, 317, 146),  # ВПЧ
+        0: (-93, 317, 146),    # УГИ (pcr-1) #1
+        1: (-315, 317, 146),   # ВПЧ (pcr-2)
+        2: (-537, 317, 146),   # УГИ+ВПЧ (pcr-1+pcr-2)
+        3: (-759, 317, 146),   # Разное (pcr)
+        4: (-981, 317, 146),   # УГИ (pcr-1) #2
     }
 
-    # Позиция паузы для замены штатива (робот встаёт в эту позицию)
-    PAUSE_POSITION = (-512, 310, 195)  # ← Измени на свою позицию
-    
-    # Вместимость штатива назначения (по умолчанию 10x6 = 60)
-    RACK_CAPACITY = 60
-
-    # Шаги между пробирками
+    PAUSE_POSITION = (-512, 310, 195)
+    RACK_CAPACITY = 50
     X_STEP = 20.7
     Y_STEP = 20.7
 
-    # Вывод информации о матрицах
     print("\n" + "=" * 80)
     print("КОНФИГУРАЦИЯ ИЗ matrix_data.py")
     print("=" * 80)
@@ -694,16 +665,14 @@ async def main_async():
         print(f"Паллет {config['id']}: {active}/{total} активных позиций")
     print("=" * 80)
 
-    # Инициализация устройств
     scanner = Scanner(ip='192.168.124.4', port=6000)
     cobot = RobotManipulator("R1", ip="192.168.124.2")
 
     connect_devices(scanner, cobot)
     
     try:
-        test_matrix = TestMatrix(test_types=test_types, rack_capacity=(10, 6))
+        test_matrix = TestMatrix(test_types=test_types, rack_capacity=(10, 5))
 
-        # ========== ФАЗА 1: СКАНИРОВАНИЕ ==========
         print("\n" + "=" * 100)
         print("ФАЗА 1: СКАНИРОВАНИЕ ВСЕХ ПАЛЛЕТОВ")
         print("=" * 100)
@@ -729,8 +698,8 @@ async def main_async():
             )
 
         test_matrix.print_matrix()
+        test_matrix.save_to_file('robot_data.json')
 
-        # ========== ФАЗА 2: СОРТИРОВКА ==========
         print("\n" + "=" * 100)
         print("ФАЗА 2: СОРТИРОВКА ПАЛЛЕТОВ")
         print("=" * 100)

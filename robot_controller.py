@@ -15,13 +15,13 @@ class RobotController:
     def __init__(self):
         self.lock = Lock()
         self.state = {
-            'command': 'idle',  # idle, start, pause, stop, change_rack
+            'command': 'idle',  # idle, start, pause, resume, stop
             'running': False,
             'paused': False,
             'rack_to_change': None,  # 'ugi', 'vpch', 'both'
             'current_pallet': 0,
-            'rack_replaced': False,  # Флаг что штатив заменён
-            'pause_requested': False,  # Новый флаг для запроса паузы
+            'rack_replaced': False,
+            'pause_requested': False,
         }
         self.load_state()
     
@@ -98,6 +98,11 @@ class RobotController:
                 self.state['pause_requested'] = False
             self.save_state()
     
+    def is_stop_requested(self):
+        """Проверка запроса полной остановки"""
+        cmd = self.get_command()
+        return cmd == 'stop'
+    
     def get_rack_to_change(self):
         """Какой штатив нужно заменить"""
         with self.lock:
@@ -128,6 +133,9 @@ class RobotController:
         """Ждать снятия паузы"""
         start_time = time.time()
         while self.is_paused() and (time.time() - start_time < timeout):
+            # Проверяем команду остановки
+            if self.is_stop_requested():
+                return False
             time.sleep(0.5)
         return not self.is_paused()
     
@@ -144,6 +152,10 @@ class RobotController:
         
         # Ждём замены через веб или Enter в консоли
         while not self.is_rack_replaced() and (time.time() - start_time < timeout):
+            # Проверяем команду остановки
+            if self.is_stop_requested():
+                print("✗ Получена команда остановки")
+                return False
             time.sleep(0.5)
         
         if self.is_rack_replaced():
@@ -162,8 +174,13 @@ class RobotController:
             pause_position: Позиция паузы (x, y, z)
         
         Returns:
-            True если продолжаем, False если ошибка
+            True если продолжаем, False если ошибка или остановка
         """
+        # Проверяем команду остановки
+        if self.is_stop_requested():
+            print("\n⏹️ ПОЛУЧЕНА КОМАНДА ПОЛНОЙ ОСТАНОВКИ")
+            return False
+        
         # Если был запрос паузы - обработаем его
         if self.is_pause_requested():
             print("\n⏸ ЗАПРОС ПАУЗЫ - перемещение в позицию паузы...")
@@ -190,7 +207,7 @@ class RobotController:
                 print("▶ Продолжаем работу")
                 return True
             else:
-                print("✗ Таймаут паузы")
+                print("✗ Остановка программы")
                 return False
         
         return True

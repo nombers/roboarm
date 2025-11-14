@@ -8,7 +8,6 @@
 </head>
 <body>
     <div class="container">
-        <div class="icon">⚗️</div>
         <h1>Система штативов</h1>
 
         <!-- Секция настроек и управления -->
@@ -16,18 +15,15 @@
             <div class="section-title">Настройки и управление</div>
             <div class="button-row">
                 <button class="btn-settings" onclick="goToSettings()">
-                    ⚙️ Поменять количество изначальных пробирок в штативе
+                    ⚙️ Настройки штативов
                 </button>
             </div>
             <div class="button-row">
-                <button class="btn-start" onclick="startProgram()">
+                <button id="startStopBtn" class="btn-start" onclick="toggleStartStop()">
                     ▶️ Старт программы
                 </button>
-                <button class="btn-pause" onclick="pauseProgram()">
+                <button id="pauseResumeBtn" class="btn-pause" onclick="togglePauseResume()" style="display: none;">
                     ⏸️ Пауза программы
-                </button>
-                <button class="btn-resume" onclick="resumeProgram()">
-                    ▶️ Продолжить программу
                 </button>
             </div>
         </div>
@@ -36,18 +32,135 @@
 
         <!-- Секция смены штативов -->
         <div class="button-section">
-            <div class="section-title">Смена штативов</div>
-            <div class="button-column">
-                <button class="btn-rack" onclick="changeRackUGI()">
-                    🧪 Смена штатива с УГИ
-                </button>
-                <button class="btn-rack" onclick="changeRackVPCH()">
-                    🧪 Смена штатива с ВПЧ
-                </button>
-                <button class="btn-rack" onclick="changeRackBoth()">
-                    🧪 Смена штатива с УГИ + ВПЧ
-                </button>
+            <div class="section-title">Управление штативами</div>
+            
+            <!-- Заголовок УГИ -->
+            <h2 style="color: #000; font-size: 28px; margin: 30px 0 15px 0; text-align: center; border-bottom: 3px solid #000; padding-bottom: 10px;">
+                УГИ
+            </h2>
+            
+            <!-- УГИ #1 -->
+            <div style="margin-bottom: 20px; padding: 20px; background: #f5f5f5; border-radius: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap;">
+                    <div style="color: #000; font-size: 20px; font-weight: bold;">
+                        🧪 Штатив УГИ #1
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <label style="color: #000; font-size: 16px;">Количество пробирок:</label>
+                        <input type="number" id="ugi-1-count" value="50" min="0" max="50" 
+                               style="width: 80px; padding: 10px; font-size: 16px; border: 2px solid #808080; border-radius: 5px;">
+                    </div>
+                    <button class="btn-rack" onclick="viewRackBarcodes('ugi', 0)" style="min-width: 200px;">
+                        📋 Просмотр баркодов
+                    </button>
+                    <button class="btn-rack" onclick="changeRackWithCount('ugi', 0)" style="min-width: 200px;">
+                        🔄 Заменить штатив
+                    </button>
+                </div>
             </div>
+
+            <!-- УГИ #2 -->
+            <div style="margin-bottom: 20px; padding: 20px; background: #f5f5f5; border-radius: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap;">
+                    <div style="color: #000; font-size: 20px; font-weight: bold;">
+                        🧪 Штатив УГИ #2
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <label style="color: #000; font-size: 16px;">Количество пробирок:</label>
+                        <input type="number" id="ugi-2-count" value="50" min="0" max="50" 
+                               style="width: 80px; padding: 10px; font-size: 16px; border: 2px solid #808080; border-radius: 5px;">
+                    </div>
+                    <button class="btn-rack" onclick="viewRackBarcodes('ugi', 4)" style="min-width: 200px;">
+                        📋 Просмотр баркодов
+                    </button>
+                    <button class="btn-rack" onclick="changeRackWithCount('ugi', 4)" style="min-width: 200px;">
+                        🔄 Заменить штатив
+                    </button>
+                </div>
+            </div>
+
+            <!-- Заголовок ВПЧ -->
+            <h2 style="color: #000; font-size: 28px; margin: 30px 0 15px 0; text-align: center; border-bottom: 3px solid #000; padding-bottom: 10px;">
+                ВПЧ
+            </h2>
+
+            <!-- ВПЧ #1 -->
+            <div style="margin-bottom: 20px; padding: 20px; background: #f5f5f5; border-radius: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap;">
+                    <div style="color: #000; font-size: 20px; font-weight: bold;">
+                        🧪 Штатив ВПЧ #1
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <label style="color: #000; font-size: 16px;">Количество пробирок:</label>
+                        <input type="number" id="vpch-1-count" value="50" min="0" max="50" 
+                               style="width: 80px; padding: 10px; font-size: 16px; border: 2px solid #808080; border-radius: 5px;">
+                    </div>
+                    <button class="btn-rack" onclick="viewRackBarcodes('vpch', 1)" style="min-width: 200px;">
+                        📋 Просмотр баркодов
+                    </button>
+                    <button class="btn-rack" onclick="changeRackWithCount('vpch', 1)" style="min-width: 200px;">
+                        🔄 Заменить штатив
+                    </button>
+                </div>
+            </div>
+
+            <!-- Заголовок УГИ+ВПЧ -->
+            <h2 style="color: #000; font-size: 28px; margin: 30px 0 15px 0; text-align: center; border-bottom: 3px solid #000; padding-bottom: 10px;">
+                УГИ+ВПЧ
+            </h2>
+
+            <!-- УГИ+ВПЧ #1 -->
+            <div style="margin-bottom: 20px; padding: 20px; background: #f5f5f5; border-radius: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap;">
+                    <div style="color: #000; font-size: 20px; font-weight: bold;">
+                        🧪 Штатив УГИ+ВПЧ #1
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <label style="color: #000; font-size: 16px;">Количество пробирок:</label>
+                        <input type="number" id="both-1-count" value="50" min="0" max="50" 
+                               style="width: 80px; padding: 10px; font-size: 16px; border: 2px solid #808080; border-radius: 5px;">
+                    </div>
+                    <button class="btn-rack" onclick="viewRackBarcodes('both', 2)" style="min-width: 200px;">
+                        📋 Просмотр баркодов
+                    </button>
+                    <button class="btn-rack" onclick="changeRackWithCount('both', 2)" style="min-width: 200px;">
+                        🔄 Заменить штатив
+                    </button>
+                </div>
+            </div>
+
+            <!-- Заголовок Разное -->
+            <h2 style="color: #000; font-size: 28px; margin: 30px 0 15px 0; text-align: center; border-bottom: 3px solid #000; padding-bottom: 10px;">
+                Разное
+            </h2>
+
+            <!-- Разное #1 -->
+            <div style="margin-bottom: 20px; padding: 20px; background: #f5f5f5; border-radius: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap;">
+                    <div style="color: #000; font-size: 20px; font-weight: bold;">
+                        🧪 Штатив Разное #1
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <label style="color: #000; font-size: 16px;">Количество пробирок:</label>
+                        <input type="number" id="other-1-count" value="50" min="0" max="50" 
+                               style="width: 80px; padding: 10px; font-size: 16px; border: 2px solid #808080; border-radius: 5px;">
+                    </div>
+                    <button class="btn-rack" onclick="viewRackBarcodes('other', 3)" style="min-width: 200px;">
+                        📋 Просмотр баркодов
+                    </button>
+                    <button class="btn-rack" onclick="changeRackWithCount('other', 3)" style="min-width: 200px;">
+                        🔄 Заменить штатив
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для баркодов -->
+    <div id="barcodesModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: white; padding: 30px; border-radius: 15px; max-width: 80%; max-height: 80%; overflow-y: auto; position: relative;">
+            <button onclick="closeModal()" style="position: absolute; top: 15px; right: 15px; background: #808080; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 18px; font-weight: bold;">✖ Закрыть</button>
+            <div id="modalContent"></div>
         </div>
     </div>
 
@@ -55,21 +168,70 @@
         // API URL
         const API_URL = 'http://localhost:5000/api';
 
+        // Состояние программы
+        let isProgramRunning = false;
+        let isProgramPaused = false;
+
         // Обновление статуса робота
         async function updateStatus() {
             try {
                 const response = await fetch(`${API_URL}/robot_status`);
                 const data = await response.json();
                 
-                // Обновляем индикаторы статуса (если нужно)
+                // Обновляем состояние
+                isProgramRunning = data.running;
+                isProgramPaused = data.paused;
+                
+                // Обновляем UI
+                updateButtonStates();
+                
                 console.log('Статус робота:', data);
             } catch (error) {
                 console.error('Ошибка получения статуса:', error);
             }
         }
 
+        function updateButtonStates() {
+            const startStopBtn = document.getElementById('startStopBtn');
+            const pauseResumeBtn = document.getElementById('pauseResumeBtn');
+            
+            if (isProgramRunning) {
+                startStopBtn.innerHTML = '⏹️ Полная остановка программы';
+                startStopBtn.className = 'btn-stop';
+                pauseResumeBtn.style.display = 'inline-block';
+                
+                if (isProgramPaused) {
+                    pauseResumeBtn.innerHTML = '▶️ Продолжить программу';
+                } else {
+                    pauseResumeBtn.innerHTML = '⏸️ Пауза программы';
+                }
+            } else {
+                startStopBtn.innerHTML = '▶️ Старт программы';
+                startStopBtn.className = 'btn-start';
+                pauseResumeBtn.style.display = 'none';
+            }
+        }
+
         function goToSettings() {
             window.location.href = 'matrices.html';
+        }
+
+        async function toggleStartStop() {
+            if (isProgramRunning) {
+                if (confirm('Вы уверены что хотите полностью остановить программу?')) {
+                    await stopProgram();
+                }
+            } else {
+                await startProgram();
+            }
+        }
+
+        async function togglePauseResume() {
+            if (isProgramPaused) {
+                await resumeProgram();
+            } else {
+                await pauseProgram();
+            }
         }
 
         async function startProgram() {
@@ -82,6 +244,29 @@
                 
                 if (data.success) {
                     alert('✓ ' + data.message);
+                    isProgramRunning = true;
+                    updateButtonStates();
+                } else {
+                    alert('✗ ' + data.message);
+                }
+            } catch (error) {
+                alert('✗ Ошибка связи с сервером: ' + error);
+            }
+        }
+
+        async function stopProgram() {
+            try {
+                const response = await fetch(`${API_URL}/stop_program`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✓ ' + data.message);
+                    isProgramRunning = false;
+                    isProgramPaused = false;
+                    updateButtonStates();
                 } else {
                     alert('✗ ' + data.message);
                 }
@@ -100,6 +285,8 @@
                 
                 if (data.success) {
                     alert('✓ ' + data.message);
+                    isProgramPaused = true;
+                    updateButtonStates();
                 } else {
                     alert('✗ ' + data.message);
                 }
@@ -118,6 +305,8 @@
                 
                 if (data.success) {
                     alert('✓ ' + data.message);
+                    isProgramPaused = false;
+                    updateButtonStates();
                 } else {
                     alert('✗ ' + data.message);
                 }
@@ -126,12 +315,22 @@
             }
         }
 
-        async function changeRackUGI() {
+        async function changeRackWithCount(type, rackId) {
+            // Получаем количество из input
+            let inputId;
+            if (type === 'ugi' && rackId === 0) inputId = 'ugi-1-count';
+            else if (type === 'ugi' && rackId === 4) inputId = 'ugi-2-count';
+            else if (type === 'vpch') inputId = 'vpch-1-count';
+            else if (type === 'both') inputId = 'both-1-count';
+            else if (type === 'other') inputId = 'other-1-count';
+            
+            const count = document.getElementById(inputId).value;
+            
             try {
                 const response = await fetch(`${API_URL}/change_rack`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({type: 'ugi'})
+                    body: JSON.stringify({type: type, rack_id: rackId, tube_count: parseInt(count)})
                 });
                 const data = await response.json();
                 
@@ -145,45 +344,45 @@
             }
         }
 
-        async function changeRackVPCH() {
+        async function viewRackBarcodes(type, rackId) {
             try {
-                const response = await fetch(`${API_URL}/change_rack`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({type: 'vpch'})
-                });
+                const response = await fetch(`${API_URL}/get_barcodes`);
                 const data = await response.json();
                 
-                if (data.success) {
-                    alert('✓ ' + data.message);
+                const modalContent = document.getElementById('modalContent');
+                const modal = document.getElementById('barcodesModal');
+                
+                if (data.success && data.barcodes[type] && data.barcodes[type][rackId]) {
+                    const tubes = data.barcodes[type][rackId];
+                    
+                    let html = `<h2 style="color: #000; margin-bottom: 20px; margin-top: 40px;">Штатив ${type.toUpperCase()} #${rackId}</h2>`;
+                    html += `<p style="color: #666; font-size: 18px; margin-bottom: 20px;">Всего пробирок: ${tubes.length}</p>`;
+                    html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px;">';
+                    
+                    tubes.forEach((tube, idx) => {
+                        html += `<div style="background: #f5f5f5; padding: 15px; border-radius: 8px; font-family: monospace; border: 2px solid #ccc; text-align: center;">
+                                    <div style="font-weight: bold; color: #000; margin-bottom: 5px;">№${idx + 1}</div>
+                                    <div style="color: #333; font-size: 14px;">${tube}</div>
+                                 </div>`;
+                    });
+                    
+                    html += '</div>';
+                    modalContent.innerHTML = html;
+                    modal.style.display = 'flex';
                 } else {
-                    alert('✗ ' + data.message);
+                    modalContent.innerHTML = '<h2 style="color: #000; margin-top: 40px;">Нет данных для этого штатива</h2><p style="color: #666; margin-top: 10px;">Штатив пуст или данные ещё не загружены</p>';
+                    modal.style.display = 'flex';
                 }
             } catch (error) {
                 alert('✗ Ошибка связи с сервером: ' + error);
             }
         }
 
-        async function changeRackBoth() {
-            try {
-                const response = await fetch(`${API_URL}/change_rack`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({type: 'both'})
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    alert('✓ ' + data.message);
-                } else {
-                    alert('✗ ' + data.message);
-                }
-            } catch (error) {
-                alert('✗ Ошибка связи с сервером: ' + error);
-            }
+        function closeModal() {
+            document.getElementById('barcodesModal').style.display = 'none';
         }
 
-        // Обновляем статус каждые 1 секунду
+        // Обновляем статус каждую секунду
         setInterval(updateStatus, 1000);
         updateStatus();
     </script>

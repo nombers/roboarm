@@ -8,7 +8,7 @@
 </head>
 <body>
     <div class="containerForMetrices">
-        <h1>Штатив с двумя матрицами 10×6</h1>
+        <h1>Штатив с двумя матрицами 10×5</h1>
         <div class="info">
             Зажмите мышь и проведите по ячейкам, чтобы нарисовать контур<br>
             <small style="color: #666;">Двойной клик на ячейке — снять выделение</small>
@@ -38,14 +38,13 @@
 
     <script>
         const ROWS = 10;
-        const COLS = 6;
+        const COLS = 5;
         let matrix1 = Array(ROWS).fill().map(() => Array(COLS).fill(0));
         let matrix2 = Array(ROWS).fill().map(() => Array(COLS).fill(0));
         let contourCells1 = new Set();
         let contourCells2 = new Set();
         let isDrawing = false;
 
-        // Весь код создания матриц такой же...
         function createMatrix() {
             createSingleMatrix('matrix1', contourCells1, matrix1);
             createSingleMatrix('matrix2', contourCells2, matrix2);
@@ -68,7 +67,7 @@
                     cell.addEventListener('mousedown', startDrawing);
                     cell.addEventListener('mouseenter', drawContour);
                     cell.addEventListener('mouseup', stopDrawing);
-                    cell.addEventListener('dblclick', removeFromContour);  // Двойной клик для удаления
+                    cell.addEventListener('dblclick', removeFromContour);
                     
                     matrixDiv.appendChild(cell);
                 }
@@ -118,7 +117,6 @@
             const contourCells = matrixId === 'matrix1' ? contourCells1 : contourCells2;
             const matrix = matrixId === 'matrix1' ? matrix1 : matrix2;
             
-            // Удаляем из контура и внутренних областей
             if (contourCells.has(key)) {
                 contourCells.delete(key);
                 cell.classList.remove('contour');
@@ -221,10 +219,8 @@
             }, 3000);
         }
 
-        // СОХРАНЕНИЕ ЧЕРЕЗ СЕРВЕР
         async function saveMatrixToPython() {
             try {
-                // Формируем содержимое Python файла БЕЗ numpy
                 let pythonContent = '# Матрицы контуров штатива\n';
                 pythonContent += `# Размер каждой матрицы: ${ROWS}x${COLS}\n`;
                 pythonContent += '# 1 = внутри контура или на контуре, 0 = снаружи\n\n';
@@ -251,7 +247,6 @@
                 pythonContent += 'def get_both_matrices():\n    return matrix1, matrix2\n\n';
                 pythonContent += `ROWS = ${ROWS}\nCOLS = ${COLS}\n`;
                 
-                // Отправляем на сервер
                 const response = await fetch('http://localhost:5000/save_matrix', {
                     method: 'POST',
                     headers: {

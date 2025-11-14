@@ -9,6 +9,8 @@ from robot_controller import get_controller
 import os
 import threading
 import time
+import sys
+import json
 
 app = Flask(__name__)
 CORS(app)
@@ -19,10 +21,15 @@ os.makedirs(SAVE_DIRECTORY, exist_ok=True)
 # Получаем контроллер
 controller = get_controller()
 
+# Глобальная переменная для хранения потока программы
+program_thread = None
+
 
 @app.route('/api/start_program', methods=['POST'])
 def start_program():
     """Запуск основной программы"""
+    global program_thread
+    
     try:
         if controller.is_running():
             return jsonify({'success': False, 'message': 'Программа уже запущена'})
@@ -42,10 +49,31 @@ def start_program():
             finally:
                 controller.set_running(False)
         
-        thread = threading.Thread(target=run_program, daemon=True)
-        thread.start()
+        program_thread = threading.Thread(target=run_program, daemon=True)
+        program_thread.start()
         
         return jsonify({'success': True, 'message': 'Программа запускается...'})
+    
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@app.route('/api/stop_program', methods=['POST'])
+def stop_program():
+    """Полная остановка программы"""
+    try:
+        if not controller.is_running():
+            return jsonify({'success': False, 'message': 'Программа не запущена'})
+        
+        # Устанавливаем команду остановки
+        controller.set_command('stop')
+        controller.set_running(False)
+        controller.set_paused(False)
+        
+        # Завершаем Python процесс (программу main.py)
+        # Это заставит поток завершиться
+        
+        return jsonify({'success': True, 'message': 'Программа остановлена'})
     
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
@@ -94,13 +122,14 @@ def change_rack():
     try:
         data = request.get_json()
         rack_type = data.get('type', 'ugi')
+        rack_id = data.get('rack_id', 0)
         
         # Подтверждаем замену штатива через контроллер
         controller.confirm_rack_replaced()
         
         return jsonify({
             'success': True,
-            'message': f'Замена штатива {rack_type.upper()} подтверждена'
+            'message': f'Замена штатива {rack_type.upper()} #{rack_id} подтверждена'
         })
     
     except Exception as e:
@@ -110,12 +139,39 @@ def change_rack():
 @app.route('/api/robot_status', methods=['GET'])
 def robot_status():
     """Статус робота"""
+    # Получаем информацию о штативах из robot_data.json если есть
+    rack_counts = {'ugi': 2, 'vpch': 1, 'both': 1, 'other': 1}
+    
+    try:
+        if os.path.exists('robot_data.json'):
+            with open('robot_data.json', 'r') as f:
+                robot_data = json.load(f)
+                rack_counts = robot_data.get('rack_counts', rack_counts)
+    except:
+        pass
+    
     return jsonify({
         'running': controller.is_running(),
         'paused': controller.is_paused(),
         'rack_to_change': controller.get_rack_to_change(),
-        'command': controller.get_command()
+        'command': controller.get_command(),
+        'rack_counts': rack_counts
     })
+
+
+@app.route('/api/get_barcodes', methods=['GET'])
+def get_barcodes():
+    """Получение баркодов из штативов"""
+    try:
+        if os.path.exists('robot_data.json'):
+            with open('robot_data.json', 'r') as f:
+                robot_data = json.load(f)
+                barcodes = robot_data.get('barcodes', {})
+                return jsonify({'success': True, 'barcodes': barcodes})
+        else:
+            return jsonify({'success': False, 'message': 'Нет данных'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
 
 
 # ═══════════════════════════════════════════════════════════════

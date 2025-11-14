@@ -10,7 +10,7 @@ body {
     justify-content: center;
     min-height: 100vh;
     margin: 0;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #ffffff;
 }
 
 /* ============================================
@@ -19,23 +19,24 @@ body {
 
 /* Контейнер для главной страницы */
 .container {
-    background: white;
+    background: #ffffff;
     padding: 40px;
     border-radius: 15px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    border: 2px solid #000000;
     text-align: center;
-    max-width: 700px;
+    max-width: 90%;
     width: 90%;
 }
 
 .container h1 {
-    color: #333;
+    color: #000000;
     margin-bottom: 30px;
-    font-size: 32px;
+    font-size: 42px;
+    font-weight: bold;
 }
 
 .container .icon {
-    font-size: 64px;
+    font-size: 80px;
     margin-bottom: 20px;
 }
 
@@ -45,46 +46,47 @@ body {
 }
 
 .container .section-title {
-    color: #666;
-    font-size: 14px;
+    color: #000000;
+    font-size: 28px;
     font-weight: bold;
     text-transform: uppercase;
-    margin-bottom: 15px;
-    letter-spacing: 1px;
+    margin-bottom: 25px;
+    letter-spacing: 2px;
 }
 
 .container .button-row {
     display: flex;
-    gap: 15px;
+    gap: 20px;
     justify-content: center;
     flex-wrap: wrap;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
 }
 
 .container .button-column {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 20px;
     align-items: stretch;
 }
 
 /* Кнопки для главной страницы */
 .container button {
-    padding: 15px 30px;
-    font-size: 16px;
+    padding: 40px 60px;
+    font-size: 24px;
     cursor: pointer;
-    color: white;
-    border: none;
+    color: #ffffff;
+    border: 3px solid #000000;
     border-radius: 10px;
     transition: all 0.3s;
     font-weight: bold;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-    min-width: 200px;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+    min-width: 350px;
+    min-height: 100px;
 }
 
 .container button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
 }
 
 .container button:active {
@@ -93,71 +95,76 @@ body {
 
 /* Специфичные стили кнопок главной страницы */
 .container .btn-settings {
-    background-color: #9b59b6;
+    background-color: #808080;
+    color: #ffffff;
 }
 
 .container .btn-settings:hover {
-    background-color: #8e44ad;
+    background-color: #666666;
 }
 
 .container .btn-start {
-    background-color: #27ae60;
+    background-color: #808080;
+    color: #ffffff;
 }
 
 .container .btn-start:hover {
-    background-color: #229954;
+    background-color: #666666;
 }
 
 .container .btn-pause {
-    background-color: #e67e22;
+    background-color: #808080;
+    color: #ffffff;
 }
 
 .container .btn-pause:hover {
-    background-color: #d35400;
+    background-color: #666666;
 }
 
-.container .btn-resume {
-    background-color: #16a085;
+.container .btn-stop {
+    background-color: #808080;
+    color: #ffffff;
 }
 
-.container .btn-resume:hover {
-    background-color: #138d75;
+.container .btn-stop:hover {
+    background-color: #666666;
 }
 
 .container .btn-rack {
-    background-color: #3498db;
+    background-color: #808080;
+    color: #ffffff;
 }
 
 .container .btn-rack:hover {
-    background-color: #2980b9;
+    background-color: #666666;
 }
 
 /* Разделитель для главной страницы */
 .container .divider {
-    height: 2px;
-    background: linear-gradient(to right, transparent, #ddd, transparent);
-    margin: 30px 0;
+    height: 3px;
+    background: #000000;
+    margin: 40px 0;
 }
 
 /* Индикаторы статуса */
 .container .status-indicator {
     display: inline-block;
-    width: 12px;
-    height: 12px;
+    width: 15px;
+    height: 15px;
     border-radius: 50%;
-    margin-right: 8px;
+    margin-right: 10px;
 }
 
 .container .status-ready {
-    background-color: #27ae60;
+    background-color: #000000;
 }
 
 .container .status-paused {
-    background-color: #e67e22;
+    background-color: #666666;
 }
 
 .container .status-stopped {
-    background-color: #95a5a6;
+    background-color: #cccccc;
 }
 
 /* ============================================
@@ -166,14 +173,14 @@ body {
 
 /* Контейнер для страницы с матрицами */
 .containerForMetrices {
-    background: white;
+    background: #ffffff;
     padding: 30px;
     border-radius: 15px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    border: 2px solid #000000;
 }
 
 .containerForMetrices h1 {
-    color: #333;
+    color: #000000;
     margin-bottom: 20px;
     font-size: 32px;
     text-align: center;
@@ -181,21 +188,21 @@ body {
 
 .containerForMetrices h3 {
     text-align: center;
-    color: #333;
+    color: #000000;
     margin-bottom: 10px;
 }
 
 .containerForMetrices .info {
     margin-top: 20px;
     text-align: center;
-    color: #333;
+    color: #000000;
 }
 
 /* Матрица */
 .containerForMetrices .matrix-wrapper {
-    width: 600px;
+    width: 550px;
     height: 600px;
-    background-color: #888;
+    background-color: #333333;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -205,18 +212,18 @@ body {
 
 .containerForMetrices .matrix {
     display: grid;
-    grid-template-columns: repeat(6, 50px);
+    grid-template-columns: repeat(5, 50px);
     grid-template-rows: repeat(10, 50px);
     gap: 2px;
-    background-color: #ddd;
+    background-color: #666666;
     padding: 2px;
     border-radius: 8px;
     user-select: none;
 }
 
 .containerForMetrices .cell {
-    background-color: white;
-    border: 1px solid #ccc;
+    background-color: #ffffff;
+    border: 1px solid #000000;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -227,41 +234,42 @@ body {
 }
 
 .containerForMetrices .cell.contour {
-    background-color: #4CAF50;
-    color: white;
+    background-color: #ff8c00;
+    color: #ffffff;
 }
 
 .containerForMetrices .cell.inside {
-    background-color: #2196F3;
-    color: white;
+    background-color: #ffff00;
+    color: #000000;
 }
 
 /* Контролы для страницы с матрицами */
 .containerForMetrices .controls {
     margin-top: 20px;
     display: flex;
-    gap: 10px;
+    gap: 15px;
     justify-content: center;
     flex-wrap: wrap;
 }
 
 .containerForMetrices .controls button {
-    padding: 15px 30px;
-    font-size: 16px;
+    padding: 30px 50px;
+    font-size: 20px;
     cursor: pointer;
-    background-color: #667eea;
-    color: white;
+    background-color: #808080;
+    color: #ffffff;
     border: none;
     border-radius: 12px;
     transition: all 0.3s;
     font-weight: bold;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    min-width: 250px;
 }
 
 .containerForMetrices .controls button:hover {
-    background-color: #764ba2;
+    background-color: #666666;
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(118, 75, 162, 0.4);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
 }
 
 .containerForMetrices .controls button:active {
@@ -272,13 +280,13 @@ body {
 .containerForMetrices .message {
     margin-top: 20px;
     padding: 15px;
-    background-color: #4CAF50;
-    color: white;
+    background-color: #000000;
+    color: #ffffff;
     border-radius: 8px;
     text-align: center;
     display: none;
 }
 
 .containerForMetrices .message.error {
-    background-color: #f44336;
+    background-color: #666666;
 }
